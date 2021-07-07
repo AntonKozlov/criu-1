@@ -64,8 +64,8 @@ static inline int set_compat_robust_list(uint32_t head_ptr, uint32_t len)
 									\
 		     "thread_run:				\n"	\
 		     "xorq %%rbp, %%rbp				\n"	\
-		     "popq %%rax				\n"	\
-		     "popq %%rdi				\n"	\
+		     "movq 0(%%rsp), %%rax			\n"	\
+		     "movq 8(%%rsp), %%rdi			\n"	\
 		     "callq *%%rax				\n"	\
 									\
 		     "clone_end:				\n"	\

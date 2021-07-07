@@ -915,7 +915,7 @@ static int kerndat_uffd(void)
 	 * have a problem!"
 	 */
 	if (uffd < 0) {
-		if (uffd == -ENOSYS)
+		if (uffd == -ENOSYS || uffd == -EPERM)
 			return 0;
 
 		pr_err("Lazy pages are not available\n");
@@ -1029,7 +1029,7 @@ static bool kerndat_has_clone3_set_tid(void)
 	}
 	if (pid == -1 && errno == EINVAL) {
 		kdat.has_clone3_set_tid = true;
-	} else {
+	} else if (pid == -1 && errno != EPERM) {
 		pr_perror("Unexpected error from clone3\n");
 		return -1;
 	}

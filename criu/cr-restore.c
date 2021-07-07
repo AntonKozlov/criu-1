@@ -1387,16 +1387,14 @@ static inline int fork_with_pid(struct pstree_item *item)
 
 		if (!kdat.has_clone3_set_tid) {
 			fd = open_proc_rw(PROC_GEN, LAST_PID_PATH);
-			if (fd < 0)
-				goto err;
 		}
 
 		lock_last_pid();
 
-		if (!kdat.has_clone3_set_tid) {
+		if (!kdat.has_clone3_set_tid && 0 <= fd) {
 			len = snprintf(buf, sizeof(buf), "%d", pid - 1);
 			if (write(fd, buf, len) != len) {
-				pr_perror("%d: Write %s to %s", pid, buf,
+				pr_warn("%d: Write %s to %s: %m\n", pid, buf,
 					LAST_PID_PATH);
 				close(fd);
 				goto err_unlock;
@@ -1426,10 +1424,12 @@ static inline int fork_with_pid(struct pstree_item *item)
 		 * move_in_cgroup(), so drop this flag here as well.
 		 */
 		close_pid_proc();
-		ret = clone_noasan(restore_task_with_children,
-				(ca.clone_flags &
-				 ~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD,
-				&ca);
+		do {
+			ret = clone_noasan(restore_task_with_children,
+					(ca.clone_flags &
+					 ~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD,
+					&ca);
+		} while (0 < ret && ret < vpid(ca.item));
 	}
 
 	if (ret < 0) {
@@ -1447,7 +1447,6 @@ static inline int fork_with_pid(struct pstree_item *item)
 err_unlock:
 	if (!(ca.clone_flags & CLONE_NEWPID))
 		unlock_last_pid();
-err:
 	if (ca.core)
 		core_entry__free_unpacked(ca.core, NULL);
 	return ret;
@@ -1472,6 +1471,11 @@ static void sigchld_handler(int signal, siginfo_t *siginfo, void *data)
 
 		exit = WIFEXITED(status);
 		status = exit ? WEXITSTATUS(status) : WTERMSIG(status);
+
+		if (exit && status == 2) {
+			// expected orhpain process/thread
+			continue;
+		}
 
 		break;
 	}
@@ -1700,6 +1704,13 @@ static int restore_task_with_children(void *_arg)
 	int ret;
 
 	current = ca->item;
+
+	pid = getpid();
+	if (pid < vpid(current)) {
+		pr_debug("Expected pid mismatch %d expected %d\n", pid, vpid(current));
+		exit(2);
+	}
+
 
 	if (current != root_item) {
 		char buf[12];
