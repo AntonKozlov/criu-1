@@ -1570,9 +1570,15 @@ int prepare_userns_creds(void)
 {
 	/* UID and GID must be set after restoring /proc/PID/{uid,gid}_maps */
 	if (setuid(0) || setgid(0) || setgroups(0, NULL)) {
+#if 0
 		pr_perror("Unable to initialize id-s");
 		return -1;
+#else
+		pr_warn("Unable to initialize id-s: %m\n");
+#endif
+
 	}
+	pr_debug("setuid done\n");
 
 	/*
 	 * This flag is dropped after entering userns, but is
@@ -1581,8 +1587,13 @@ int prepare_userns_creds(void)
 	 * very end.
 	 */
 	if (prctl(PR_SET_DUMPABLE, 1, 0)) {
+#if 0
 		pr_perror("Unable to set PR_SET_DUMPABLE");
 		return -1;
+#else
+		int seterr = errno;
+		pr_warn("Unable to set PR_SET_DUMPABLE (current %d): %s\n", prctl(PR_GET_DUMPABLE), strerror(seterr));
+#endif
 	}
 
 	return 0;

@@ -1707,7 +1707,7 @@ static int restore_task_with_children(void *_arg)
 
 	pid = getpid();
 	if (pid < vpid(current)) {
-		pr_debug("Expected pid mismatch %d expected %d\n", pid, vpid(current));
+		/*pr_debug("Expected pid mismatch %d expected %d\n", pid, vpid(current));*/
 		exit(2);
 	}
 

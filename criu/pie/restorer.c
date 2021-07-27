@@ -633,8 +633,12 @@ long __export_restore_thread(struct thread_restore_args *args)
 
 	ret = sys_prctl(PR_SET_NAME, (unsigned long) &args->comm, 0, 0, 0);
 	if (ret) {
+#if 0
 		pr_err("Unable to set a thread name: %d\n", ret);
 		goto core_restore_end;
+#else
+		pr_warn("Unable to set a thread name: %d\n", ret);
+#endif
 	}
 
 	pr_info("%ld: Restored\n", sys_gettid());
@@ -1733,7 +1737,11 @@ long __export_restore_task(struct task_restore_args *args)
 	 */
 	ret = sys_prctl_safe(PR_SET_NAME, (long)args->comm, 0, 0);
 	if (ret)
+#if 0
 		goto core_restore_end;
+#else
+		pr_warn("Ignoring prctl(PR_SET_NAME) failure\n");
+#endif
 
 	/*
 	 * New kernel interface with @PR_SET_MM_MAP will become
@@ -1804,7 +1812,9 @@ long __export_restore_task(struct task_restore_args *args)
 		ret = 0;
 	} else {
 		if (ret)
-			pr_err("sys_prctl(PR_SET_MM, PR_SET_MM_MAP) failed with %d\n", (int)ret); sys_close(args->fd_exe_link); }
+			pr_err("sys_prctl(PR_SET_MM, PR_SET_MM_MAP) failed with %d\n", (int)ret);
+		sys_close(args->fd_exe_link);
+	}
 
 	if (ret)
 		goto core_restore_end;
