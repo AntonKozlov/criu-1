@@ -1423,12 +1423,22 @@ static inline int fork_with_pid(struct pstree_item *item)
 		 * The cgroup namespace is also unshared explicitly in the
 		 * move_in_cgroup(), so drop this flag here as well.
 		 */
+		int flags = (ca.clone_flags &
+				~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD;
 		close_pid_proc();
+		ret = 0;
 		do {
+			if (ret + 1 == vpid(ca.item)) {
+				flags = (ca.clone_flags &
+						~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD;
+			}
 			ret = clone_noasan(restore_task_with_children,
-					(ca.clone_flags &
-					 ~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD,
+					flags,
 					&ca);
+			if (ret < vpid(ca.item)) {
+				flags = 0;
+			}
+			pr_debug("clone pid %d\n", ret);
 		} while (0 < ret && ret < vpid(ca.item));
 	}
 
@@ -1440,8 +1450,12 @@ static inline int fork_with_pid(struct pstree_item *item)
 
 	if (item == root_item) {
 		item->pid->real = ret;
-		pr_debug("PID: real %d virt %d\n",
+		pr_debug("PID0: real %d virt %d\n",
 				item->pid->real, vpid(item));
+
+		if (item->pid->real != vpid(item)) {
+			system("(echo start; ps auxT) > /tmp/log2");
+		}
 	}
 
 err_unlock:
@@ -1729,7 +1743,7 @@ static int restore_task_with_children(void *_arg)
 		buf[ret] = '\0';
 
 		current->pid->real = atoi(buf);
-		pr_debug("PID: real %d virt %d\n",
+		pr_debug("PID2: real %d virt %d\n",
 				current->pid->real, vpid(current));
 	}
 
@@ -2324,23 +2338,28 @@ skip_ns_bouncing:
 	 * Network is unlocked. If something fails below - we lose data
 	 * or a connection.
 	 */
+#define PTRACE 0
+#if PTRACE
 	attach_to_tasks(root_seized);
+#endif
 
 	if (restore_switch_stage(CR_STATE_RESTORE_CREDS))
 		goto out_kill_network_unlocked;
 
 	timing_stop(TIME_RESTORE);
-
+#if PTRACE
 	if (catch_tasks(root_seized, &flag)) {
 		pr_err("Can't catch all tasks\n");
 		goto out_kill_network_unlocked;
 	}
+#endif
 
 	if (lazy_pages_finish_restore())
 		goto out_kill_network_unlocked;
 
 	__restore_switch_stage(CR_STATE_COMPLETE);
 
+#if PTRACE
 	ret = compel_stop_on_syscall(task_entries->nr_threads,
 		__NR(rt_sigreturn, 0), __NR(rt_sigreturn, 1), flag);
 	if (ret) {
@@ -2352,6 +2371,7 @@ skip_ns_bouncing:
 		pr_err("Unable to flush breakpoints\n");
 
 	finalize_restore();
+#endif
 
 	ret = run_scripts(ACT_PRE_RESUME);
 	if (ret)
@@ -2363,8 +2383,10 @@ skip_ns_bouncing:
 	fini_cgroup();
 
 	/* Detaches from processes and they continue run through sigreturn. */
+#if PTRACE
 	if (finalize_restore_detach())
 		goto out_kill_network_unlocked;
+#endif
 
 	pr_info("Restore finished successfully. Tasks resumed.\n");
 	write_stats(RESTORE_STATS);

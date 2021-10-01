@@ -608,16 +608,6 @@ long __export_restore_thread(struct thread_restore_args *args)
 	int my_pid = sys_gettid();
 	int ret;
 
-	if (my_pid < args->pid) {
-		pr_info("Thread expected pid mismatch %d/%d\n", my_pid, args->pid);
-		sys_exit(2);
-	}
-
-	if (my_pid != args->pid) {
-		pr_err("Thread pid mismatch %d/%d\n", my_pid, args->pid);
-		goto core_restore_end;
-	}
-
 	/* All signals must be handled by thread leader */
 	ksigfillset(&to_block);
 	ret = sys_sigprocmask(SIG_SETMASK, &to_block, NULL, sizeof(k_rtsigset_t));
@@ -625,6 +615,18 @@ long __export_restore_thread(struct thread_restore_args *args)
 		pr_err("Unable to block signals %d\n", ret);
 		goto core_restore_end;
 	}
+
+	if (my_pid < args->pid) {
+		pr_info("Thread expected pid mismatch %d/%d\n", my_pid, args->pid);
+		sys_exit(2);
+	}
+
+	if (my_pid != args->pid) {
+		pr_err("Thread pid mismatch %d/%d\n", my_pid, args->pid);
+		*(int*)0 = 1;
+		goto core_restore_end;
+	}
+
 
 	rt_sigframe = (void *)&args->mz->rt_sigframe;
 
@@ -674,7 +676,7 @@ long __export_restore_thread(struct thread_restore_args *args)
 	rst_sigreturn(new_sp, rt_sigframe);
 
 core_restore_end:
-	pr_err("Restorer abnormal termination for %ld\n", sys_getpid());
+	pr_err("Restorer abnormal termination for %ld %ld\n", sys_getpid(), sys_gettid());
 	futex_abort_and_wake(&task_entries_local->nr_in_progress);
 	sys_exit_group(1);
 	return -1;
@@ -1915,8 +1917,17 @@ long __export_restore_task(struct task_restore_args *args)
 				 * thread will run with own stack and we must not
 				 * have any additional instructions... oh, dear...
 				 */
+				ret = 0;
 				do {
+					pr_debug("loop clone ret %d target %d\n", ret, thread_args[i].pid);
 					RUN_CLONE_RESTORE_FN(ret, clone_flags, new_sp, parent_tid, thread_args, args->clone_restore_fn);
+					if (ret < thread_args[i].pid) {
+						int stat;
+						int ret2;
+						if (ret != (ret2 = sys_wait4(ret, &stat, 0, NULL))) {
+							pr_err("waitpid %d %d\n", ret2, stat);
+						}
+					}
 				} while (0 < ret && ret < thread_args[i].pid);
 			}
 			if (ret != thread_args[i].pid) {
@@ -1925,6 +1936,7 @@ long __export_restore_task(struct task_restore_args *args)
 				goto core_restore_end;
 			}
 		}
+		pr_debug("done\n");
 
 		mutex_unlock(&task_entries_local->last_pid_mutex);
 		if (fd >= 0)

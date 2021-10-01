@@ -56,6 +56,8 @@ void flush_early_log_to_stderr(void)
 
 int main(int argc, char *argv[], char *envp[])
 {
+	fprintf(stderr, "CRIU start\n");
+
 	int ret = -1;
 	bool usage_error = true;
 	bool has_exec_cmd = false;
