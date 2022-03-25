@@ -110,6 +110,9 @@
 #define arch_export_unmap_compat	__export_unmap_compat
 #endif
 
+// don't use ptrace during restore
+#define PTRACE 0
+
 struct pstree_item *current;
 
 static int restore_task_with_children(void *);
@@ -1452,10 +1455,6 @@ static inline int fork_with_pid(struct pstree_item *item)
 		item->pid->real = ret;
 		pr_debug("PID0: real %d virt %d\n",
 				item->pid->real, vpid(item));
-
-		if (item->pid->real != vpid(item)) {
-			system("(echo start; ps auxT) > /tmp/log2");
-		}
 	}
 
 err_unlock:
@@ -1901,6 +1900,8 @@ err:
 	exit(1);
 }
 
+#if PTRACE
+
 static int attach_to_tasks(bool root_seized)
 {
 	struct pstree_item *item;
@@ -2076,6 +2077,8 @@ static int finalize_restore_detach(void)
 	return 0;
 }
 
+#endif // PTRACE
+
 static void ignore_kids(void)
 {
 	struct sigaction sa = { .sa_handler = SIG_DFL };
@@ -2139,9 +2142,11 @@ static int write_restored_pid(void)
 
 static int restore_root_task(struct pstree_item *init)
 {
+#if PTRACE
 	enum trace_flags flag = TRACE_ALL;
-	int ret, fd, mnt_ns_fd = -1;
 	int root_seized = 0;
+#endif
+	int ret, fd, mnt_ns_fd = -1;
 	struct pstree_item *item;
 
 	ret = run_scripts(ACT_PRE_RESTORE);
@@ -2194,6 +2199,7 @@ static int restore_root_task(struct pstree_item *init)
 
 	restore_origin_ns_hook();
 
+#if PTRACE
 	if (rsti(init)->clone_flags & CLONE_PARENT) {
 		struct sigaction act;
 
@@ -2216,6 +2222,7 @@ static int restore_root_task(struct pstree_item *init)
 			goto out_kill;
 		}
 	}
+#endif
 
 	if (!root_ns_mask)
 		goto skip_ns_bouncing;
@@ -2338,7 +2345,6 @@ skip_ns_bouncing:
 	 * Network is unlocked. If something fails below - we lose data
 	 * or a connection.
 	 */
-#define PTRACE 0
 #if PTRACE
 	attach_to_tasks(root_seized);
 #endif
