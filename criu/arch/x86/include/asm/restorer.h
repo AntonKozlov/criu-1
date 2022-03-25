@@ -65,8 +65,7 @@ static inline int set_compat_robust_list(uint32_t head_ptr, uint32_t len)
 		     "thread_run:				\n"	\
 		     "movl $"__stringify(__NR_gettid)", %%eax	\n"	\
 		     "syscall					\n"	\
-		     "movq %4, %%rdx \n" \
-		     "cmpq %%rax,(%%rdx) \n" \
+		     "cmpq %%rax, %7 \n" \
 		     "je cont \n" \
 		     "mov $2, %%rdi \n" \
 		     "movl $"__stringify(__NR_exit)", %%eax	\n"	\
@@ -85,7 +84,8 @@ static inline int set_compat_robust_list(uint32_t head_ptr, uint32_t len)
 		       "g"(&parent_tid),				\
 		       "g"(&thread_args[i].pid),			\
 		       "g"(clone_restore_fn),				\
-		       "g"(&thread_args[i])				\
+		       "g"(&thread_args[i]),				\
+		       "g"(thread_args[i].pid)                          \
 		     : "rax", "rcx", "rdi", "rsi", "rdx", "r10", "r11", "memory")
 
 /* int clone3(struct clone_args *args, size_t size) */
