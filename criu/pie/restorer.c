@@ -1919,7 +1919,7 @@ long __export_restore_task(struct task_restore_args *args)
 				 */
 				ret = 0;
 				do {
-					pr_debug("loop clone ret %d target %d\n", ret, thread_args[i].pid);
+					pr_debug("loop clone ret %ld target %d\n", ret, thread_args[i].pid);
 					RUN_CLONE_RESTORE_FN(ret, clone_flags, new_sp, parent_tid, thread_args, args->clone_restore_fn);
 					if (ret < thread_args[i].pid) {
 						int stat;
