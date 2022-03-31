@@ -1057,104 +1057,74 @@ int kerndat_init(void)
 	ret = check_pagemap();
 	if (!ret)
 		ret = kerndat_get_shmemdev();
-	pr_debug("1 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_get_dirty_track();
-	pr_debug("2 SEQ %d\n", ret);
 	if (!ret)
 		ret = init_zero_page_pfn();
-	pr_debug("3 SEQ %d\n", ret);
 	if (!ret)
 		ret = get_last_cap();
-	pr_debug("4 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_fdinfo_has_lock();
-	pr_debug("5 SEQ %d\n", ret);
 	if (!ret)
 		ret = get_task_size();
-	pr_debug("6 SEQ %d\n", ret);
 	if (!ret)
 		ret = get_ipv6();
-	pr_debug("7 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_loginuid();
-	pr_debug("8 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_iptables_has_xtlocks();
-	pr_debug("9 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_tcp_repair();
-	pr_debug("10 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_compat_restore();
-	pr_debug("11 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_tun_netns();
-	pr_debug("12 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_socket_unix_file();
-	pr_debug("13 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_nsid();
-	pr_debug("14 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_link_nsid();
-	pr_debug("15 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_has_memfd_create();
-	pr_debug("16 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_detect_stack_guard_gap();
-	pr_debug("17 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_uffd();
-	pr_debug("18 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_has_thp_disable();
 	// XXX 
 	ret = 0;
-	pr_debug("19 SEQ %d\n", ret);
 	/* Needs kdat.compat_cr filled before */
 	if (!ret)
 		ret = kerndat_vdso_fill_symtable();
-	pr_debug("20 SEQ %d\n", ret);
 	/* Depends on kerndat_vdso_fill_symtable() */
 	if (!ret)
 		ret = kerndat_vdso_preserves_hint();
-	pr_debug("21 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_socket_netns();
-	pr_debug("22 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_x86_has_ptrace_fpu_xsave_bug();
 	// XXX 
 	ret = 0;
-	pr_debug("23 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_has_inotify_setnextwd();
-	pr_debug("24 SEQ %d\n", ret);
 	if (!ret)
 		ret = has_kcmp_epoll_tfd();
-	pr_debug("25 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_has_fsopen();
-	pr_debug("26 SEQ %d\n", ret);
 	if (!ret)
 		ret = kerndat_has_clone3_set_tid();
-	pr_debug("27 SEQ %d\n", ret);
 	if (!ret)
 		ret = has_time_namespace();
-	pr_debug("28 SEQ %d\n", ret);
 
 	kerndat_lsm();
 	kerndat_mmap_min_addr();
 	kerndat_files_stat();
 
-	pr_debug("SEQ 1\n");
 
 	if (!ret)
 		kerndat_save_cache();
 
-	pr_debug("SEQ 2\n");
 	return ret;
 }

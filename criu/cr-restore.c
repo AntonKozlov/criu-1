@@ -1453,7 +1453,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 
 	if (item == root_item) {
 		item->pid->real = ret;
-		pr_debug("PID0: real %d virt %d\n",
+		pr_debug("PID1: real %d virt %d\n",
 				item->pid->real, vpid(item));
 	}
 
