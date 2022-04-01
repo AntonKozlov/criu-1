@@ -160,18 +160,12 @@ static bool blobs_matches(VmaEntry *vdso_img, VmaEntry *vvar_img,
 		unsigned long rt_sym_offset	= sym_rt->symbols[i].offset;
 		char *sym_name			= sym_img->symbols[i].name;
 
-		pr_debug("vdso sym %lu / %lu\n", i, ARRAY_SIZE(sym_img->symbols));
-		pr_debug("vdso sym name %s sym_offset %lx rt_sym_offset %lx\n",
-				sym_name, sym_offset, rt_sym_offset);
 		if (sym_offset != rt_sym_offset) {
-			/*pr_info("[%zu]`%s` offset differs: %lx != %lx (rt)\n",*/
-				/*i, sym_name, sym_offset, rt_sym_offset);*/
-			pr_debug("break");
+			pr_info("[%zu]`%s` offset differs: %lx != %lx (rt)\n",
+				i, sym_name, sym_offset, rt_sym_offset);
 			return false;
 		}
 	}
-
-	pr_debug("sym_rt");
 
 	if (vvar_img && sym_rt->vvar_size != VVAR_BAD_SIZE) {
 		bool vdso_firstly = (vvar_img->start > vdso_img->start);

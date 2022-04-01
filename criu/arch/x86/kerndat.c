@@ -237,6 +237,11 @@ int kdat_x86_has_ptrace_fpu_xsave_bug(void)
 	iov.iov_len = sizeof(xsave);
 
 	if (ptrace(PTRACE_GETREGSET, child, (unsigned)NT_X86_XSTATE, &iov) < 0) {
+		if (errno == EPERM) {
+			pr_warn("Optimistically assume there is no ptrace_fpu_xsave_bug\n");
+			ret = 0;
+			goto out_kill;
+		}
 		pr_perror("Can't obtain FPU registers for %d", child);
 		goto out_kill;
 	}

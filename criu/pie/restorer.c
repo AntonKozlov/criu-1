@@ -86,12 +86,11 @@ static long sys_prctl_mm_set_range(const char *err_id, long l_id, long l_val, lo
 	int lret, rret;
 
 	lret = sys_prctl(PR_SET_MM, l_id, l_val, 0, 0);
-	pr_debug("1st prctl %d\n", lret);
 	if (lret == -EINVAL) { // probably current ARG_END is below desired ARG_START
 		int lret2 = sys_prctl(PR_SET_MM, r_id, r_val, 0, 0);
 		int rret2 = sys_prctl(PR_SET_MM, l_id, l_val, 0, 0);
 		return range_ret(err_id, lret2, rret2);
-	} 
+	}
 
 	if (lret != 0) {
 		return range_ret(err_id, lret, -1);
@@ -618,15 +617,13 @@ long __export_restore_thread(struct thread_restore_args *args)
 
 	if (my_pid < args->pid) {
 		pr_info("Thread expected pid mismatch %d/%d\n", my_pid, args->pid);
-		sys_exit(2);
+		sys_exit(2); // the exit code is ignored actually
 	}
 
 	if (my_pid != args->pid) {
 		pr_err("Thread pid mismatch %d/%d\n", my_pid, args->pid);
-		*(int*)0 = 1;
 		goto core_restore_end;
 	}
-
 
 	rt_sigframe = (void *)&args->mz->rt_sigframe;
 
@@ -663,10 +660,11 @@ long __export_restore_thread(struct thread_restore_args *args)
 			    args->ta->lsm_type);
 	ret = restore_dumpable_flag(&args->ta->mm) || ret;
 	ret = restore_pdeath_sig(args) || ret;
-#if 0
-	if (ret)
-		BUG();
-#endif
+
+	if (ret) {
+		pr_warn("Restore thread error %d\n", ret);
+		ret = 0;
+	}
 
 	restore_finish_stage(task_entries_local, CR_STATE_RESTORE_CREDS);
 
@@ -1793,7 +1791,7 @@ long __export_restore_task(struct task_restore_args *args)
 		}
 
 		ret |= sys_prctl_mm_set_range("MM_ARG",
-				PR_SET_MM_ARG_START, (long)args->mm.mm_arg_start, 
+				PR_SET_MM_ARG_START, (long)args->mm.mm_arg_start,
 				PR_SET_MM_ARG_END,   (long)args->mm.mm_arg_end);
 
 		ret |= sys_prctl_mm_set_range("MM_ENV",
@@ -1810,8 +1808,10 @@ long __export_restore_task(struct task_restore_args *args)
 		 */
 		ret |= restore_self_exe_late(args);
 
-		// XXX?
-		ret = 0;
+		if (ret) {
+			pr_warn("Ignoring restore_task error 1 %ld\n", ret);
+			ret = 0;
+		}
 	} else {
 		if (ret)
 			pr_err("sys_prctl(PR_SET_MM, PR_SET_MM_MAP) failed with %d\n", (int)ret);
@@ -1899,6 +1899,8 @@ long __export_restore_task(struct task_restore_args *args)
 				pr_debug("Using clone3 to restore the process\n");
 				RUN_CLONE3_RESTORE_FN(ret, c_args, sizeof(c_args), &thread_args[i], args->clone_restore_fn);
 			} else {
+				int cnt;
+
 				if (0 <= fd) {
 					last_pid_len = std_vprint_num(last_pid_buf, sizeof(last_pid_buf), thread_args[i].pid - 1, &s);
 					sys_lseek(fd, 0, SEEK_SET);
@@ -1918,6 +1920,7 @@ long __export_restore_task(struct task_restore_args *args)
 				 * have any additional instructions... oh, dear...
 				 */
 				ret = 0;
+				cnt = 1024;
 				do {
 					pr_debug("loop clone ret %ld target %d\n", ret, thread_args[i].pid);
 					RUN_CLONE_RESTORE_FN(ret, clone_flags, new_sp, parent_tid, thread_args, args->clone_restore_fn);
@@ -1928,7 +1931,7 @@ long __export_restore_task(struct task_restore_args *args)
 							pr_err("waitpid %d %d\n", ret2, stat);
 						}
 					}
-				} while (0 < ret && ret < thread_args[i].pid);
+				} while (0 < ret && ret < thread_args[i].pid && 0 < --cnt);
 			}
 			if (ret != thread_args[i].pid) {
 				pr_err("Unable to create a thread: %ld\n", ret);
@@ -1936,7 +1939,6 @@ long __export_restore_task(struct task_restore_args *args)
 				goto core_restore_end;
 			}
 		}
-		pr_debug("done\n");
 
 		mutex_unlock(&task_entries_local->last_pid_mutex);
 		if (fd >= 0)
@@ -2021,18 +2023,18 @@ long __export_restore_task(struct task_restore_args *args)
 	 */
 	ret = restore_creds(args->t->creds_args, args->proc_fd,
 			    args->lsm_type);
-	ret = restore_dumpable_flag(&args->mm);
-	ret = restore_pdeath_sig(args->t);
-	ret = restore_child_subreaper(args->child_subreaper);
+	ret = restore_dumpable_flag(&args->mm) || ret;
+	ret = restore_pdeath_sig(args->t) || ret;
+	ret = restore_child_subreaper(args->child_subreaper) || ret;
 
 	futex_set_and_wake(&thread_inprogress, args->nr_threads);
 
 	restore_finish_stage(task_entries_local, CR_STATE_RESTORE_CREDS);
 
-#if 0
-	if (ret)
-		BUG();
-#endif
+	if (ret) {
+		pr_warn("Ignoring restore_task error 2 %ld\n", ret);
+		ret = 0;
+	}
 
 	/* Wait until children stop to use args->task_entries */
 	futex_wait_while_gt(&thread_inprogress, 1);

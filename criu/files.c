@@ -1365,6 +1365,7 @@ static int fchroot(int fd)
 		return -1;
 	}
 
+	pr_debug("Going to chroot into /proc/self/fd/%d\n", fd);
 	return chroot(".");
 }
 

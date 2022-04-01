@@ -862,7 +862,7 @@ static void kerndat_save_cache(void)
 	int fd, ret;
 	struct statfs s;
 
-	pr_debug("skip %s\n", __func__);
+	pr_debug("skip kerndat_save_cache\n");
 	return;
 
 	fd = open(KERNDAT_CACHE_FILE_TMP, O_CREAT | O_EXCL | O_WRONLY, 0600);
@@ -945,7 +945,7 @@ int kerndat_has_thp_disable(void)
 	bool vma_match = false;
 
 	if (prctl(PR_SET_THP_DISABLE, 1, 0, 0, 0)) {
-		if (errno != EINVAL)
+		if (errno != EINVAL && errno != EPERM)
 			return -1;
 		pr_info("PR_SET_THP_DISABLE is not available\n");
 		return 0;
@@ -1093,8 +1093,6 @@ int kerndat_init(void)
 		ret = kerndat_uffd();
 	if (!ret)
 		ret = kerndat_has_thp_disable();
-	// XXX 
-	ret = 0;
 	/* Needs kdat.compat_cr filled before */
 	if (!ret)
 		ret = kerndat_vdso_fill_symtable();
@@ -1105,8 +1103,6 @@ int kerndat_init(void)
 		ret = kerndat_socket_netns();
 	if (!ret)
 		ret = kerndat_x86_has_ptrace_fpu_xsave_bug();
-	// XXX 
-	ret = 0;
 	if (!ret)
 		ret = kerndat_has_inotify_setnextwd();
 	if (!ret)

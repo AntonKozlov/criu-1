@@ -110,6 +110,8 @@
 #define arch_export_unmap_compat	__export_unmap_compat
 #endif
 
+#define NOT_THAT_PID_ECODE 2
+
 // don't use ptrace during restore
 #define PTRACE 0
 
@@ -1428,6 +1430,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 		 */
 		int flags = (ca.clone_flags &
 				~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD;
+		int cnt = 1024;
 		close_pid_proc();
 		ret = 0;
 		do {
@@ -1442,7 +1445,11 @@ static inline int fork_with_pid(struct pstree_item *item)
 				flags = 0;
 			}
 			pr_debug("clone pid %d\n", ret);
-		} while (0 < ret && ret < vpid(ca.item));
+		} while (0 < ret && ret < vpid(ca.item) && 0 < --cnt);
+
+		if (ret != vpid(ca.item)) {
+			ret = -1;
+		}
 	}
 
 	if (ret < 0) {
@@ -1485,7 +1492,7 @@ static void sigchld_handler(int signal, siginfo_t *siginfo, void *data)
 		exit = WIFEXITED(status);
 		status = exit ? WEXITSTATUS(status) : WTERMSIG(status);
 
-		if (exit && status == 2) {
+		if (exit && status == NOT_THAT_PID_ECODE) {
 			// expected orhpain process/thread
 			continue;
 		}
@@ -1720,10 +1727,9 @@ static int restore_task_with_children(void *_arg)
 
 	pid = getpid();
 	if (pid < vpid(current)) {
-		/*pr_debug("Expected pid mismatch %d expected %d\n", pid, vpid(current));*/
-		exit(2);
+		/* Expected pid mismatch, communcate back */
+		exit(NOT_THAT_PID_ECODE);
 	}
-
 
 	if (current != root_item) {
 		char buf[12];
