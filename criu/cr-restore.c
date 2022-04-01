@@ -1391,7 +1391,10 @@ static inline int fork_with_pid(struct pstree_item *item)
 		int fd = -1;
 
 		if (!kdat.has_clone3_set_tid) {
-			fd = open_proc_rw(PROC_GEN, LAST_PID_PATH);
+			fd = do_open_proc(PROC_GEN, O_RDWR, LAST_PID_PATH);
+			if (fd < 0) {
+				pr_pwarn("Can't open %d/" LAST_PID_PATH " on procfs", PROC_GEN);
+			}
 		}
 
 		lock_last_pid();
@@ -1431,6 +1434,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 		int flags = (ca.clone_flags &
 				~(CLONE_NEWNET | CLONE_NEWCGROUP | CLONE_NEWTIME)) | SIGCHLD;
 		int cnt = 1024;
+
 		close_pid_proc();
 		ret = 0;
 		do {
@@ -1456,7 +1460,6 @@ static inline int fork_with_pid(struct pstree_item *item)
 		pr_perror("Can't fork for %d", pid);
 		goto err_unlock;
 	}
-
 
 	if (item == root_item) {
 		item->pid->real = ret;

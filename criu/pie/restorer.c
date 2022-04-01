@@ -71,13 +71,13 @@
 	({								\
 		long __ret = sys_prctl(opcode, val1, val2, val3, 0);	\
 		if (__ret)						\
-			 pr_err("prctl failed @%d with %ld\n", __LINE__, __ret);\
+			 pr_warn("prctl failed @%d with %ld\n", __LINE__, __ret);\
 		__ret;							\
 	})
 
 static int range_ret(const char *err_id, int leftret, int rightret) {
 	if (leftret || rightret) {
-		pr_err("prctl set range %s left=%d right=%d\n", err_id, leftret, rightret);
+		pr_warn("prctl set range %s left=%d right=%d\n", err_id, leftret, rightret);
 	}
 	return leftret | rightret;
 }
@@ -325,7 +325,7 @@ static int restore_creds(struct thread_creds_args *args, int procfd,
 
 	ret = sys_capset(&hdr, data);
 	if (ret) {
-		pr_err("Unable to restore capabilities: %d\n", ret);
+		pr_warn("Unable to restore capabilities: %d\n", ret);
 		return -1;
 	}
 
@@ -632,12 +632,7 @@ long __export_restore_thread(struct thread_restore_args *args)
 
 	ret = sys_prctl(PR_SET_NAME, (unsigned long) &args->comm, 0, 0, 0);
 	if (ret) {
-#if 0
-		pr_err("Unable to set a thread name: %d\n", ret);
-		goto core_restore_end;
-#else
 		pr_warn("Unable to set a thread name: %d\n", ret);
-#endif
 	}
 
 	pr_info("%ld: Restored\n", sys_gettid());
@@ -687,7 +682,7 @@ static long restore_self_exe_late(struct task_restore_args *args)
 	pr_info("Restoring EXE link\n");
 	ret = sys_prctl_safe(PR_SET_MM, PR_SET_MM_EXE_FILE, fd, 0);
 	if (ret)
-		pr_err("Can't restore EXE link (%d)\n", ret);
+		pr_warn("Can't restore EXE link (%d)\n", ret);
 	sys_close(fd);
 
 	return ret;
@@ -1737,11 +1732,7 @@ long __export_restore_task(struct task_restore_args *args)
 	 */
 	ret = sys_prctl_safe(PR_SET_NAME, (long)args->comm, 0, 0);
 	if (ret)
-#if 0
-		goto core_restore_end;
-#else
 		pr_warn("Ignoring prctl(PR_SET_NAME) failure\n");
-#endif
 
 	/*
 	 * New kernel interface with @PR_SET_MM_MAP will become
@@ -1924,13 +1915,6 @@ long __export_restore_task(struct task_restore_args *args)
 				do {
 					pr_debug("loop clone ret %ld target %d\n", ret, thread_args[i].pid);
 					RUN_CLONE_RESTORE_FN(ret, clone_flags, new_sp, parent_tid, thread_args, args->clone_restore_fn);
-					if (ret < thread_args[i].pid) {
-						int stat;
-						int ret2;
-						if (ret != (ret2 = sys_wait4(ret, &stat, 0, NULL))) {
-							pr_err("waitpid %d %d\n", ret2, stat);
-						}
-					}
 				} while (0 < ret && ret < thread_args[i].pid && 0 < --cnt);
 			}
 			if (ret != thread_args[i].pid) {

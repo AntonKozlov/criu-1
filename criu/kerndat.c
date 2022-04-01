@@ -1118,7 +1118,6 @@ int kerndat_init(void)
 	kerndat_mmap_min_addr();
 	kerndat_files_stat();
 
-
 	if (!ret)
 		kerndat_save_cache();
 
