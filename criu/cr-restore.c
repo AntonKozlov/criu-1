@@ -1442,7 +1442,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 					flags,
 					&ca);
 			if (ret < vpid(ca.item)) {
-				flags = 0;
+				flags = SIGCHLD;
 			}
 			pr_debug("clone pid %d\n", ret);
 		} while (0 < ret && ret < vpid(ca.item) && 0 < --cnt);
