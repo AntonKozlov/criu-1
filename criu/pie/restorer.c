@@ -229,7 +229,7 @@ static int restore_creds(struct thread_creds_args *args, int procfd,
 	if (args->groups) {
 		ret = sys_setgroups(ce->n_groups, args->groups);
 		if (ret) {
-			pr_err("Can't setup supplementary group IDs: %d\n", ret);
+			pr_warn("Can't setup supplementary group IDs: %d\n", ret);
 			return -1;
 		}
 	}
@@ -241,7 +241,7 @@ static int restore_creds(struct thread_creds_args *args, int procfd,
 
 	ret = sys_prctl(PR_SET_SECUREBITS, 1 << SECURE_NO_SETUID_FIXUP, 0, 0, 0);
 	if (ret) {
-		pr_err("Unable to set SECURE_NO_SETUID_FIXUP: %d\n", ret);
+		pr_warn("Unable to set SECURE_NO_SETUID_FIXUP: %d\n", ret);
 		return -1;
 	}
 
@@ -253,25 +253,25 @@ static int restore_creds(struct thread_creds_args *args, int procfd,
 
 	ret = sys_setresuid(ce->uid, ce->euid, ce->suid);
 	if (ret) {
-		pr_err("Unable to set real, effective and saved user ID: %d\n", ret);
+		pr_warn("Unable to set real, effective and saved user ID: %d\n", ret);
 		return -1;
 	}
 
 	sys_setfsuid(ce->fsuid);
 	if (sys_setfsuid(-1) != ce->fsuid) {
-		pr_err("Unable to set fsuid\n");
+		pr_warn("Unable to set fsuid\n");
 		return -1;
 	}
 
 	ret = sys_setresgid(ce->gid, ce->egid, ce->sgid);
 	if (ret) {
-		pr_err("Unable to set real, effective and saved group ID: %d\n", ret);
+		pr_warn("Unable to set real, effective and saved group ID: %d\n", ret);
 		return -1;
 	}
 
 	sys_setfsgid(ce->fsgid);
 	if (sys_setfsgid(-1) != ce->fsgid) {
-		pr_err("Unable to set fsgid\n");
+		pr_warn("Unable to set fsgid\n");
 		return -1;
 	}
 
@@ -282,7 +282,7 @@ static int restore_creds(struct thread_creds_args *args, int procfd,
 
 	ret = sys_prctl(PR_SET_SECUREBITS, ce->secbits, 0, 0, 0);
 	if (ret) {
-		pr_err("Unable to set PR_SET_SECUREBITS: %d\n", ret);
+		pr_warn("Unable to set PR_SET_SECUREBITS: %d\n", ret);
 		return -1;
 	}
 
@@ -300,7 +300,7 @@ static int restore_creds(struct thread_creds_args *args, int procfd,
 				continue;
 			ret = sys_prctl(PR_CAPBSET_DROP, i + b * 32, 0, 0, 0);
 			if (ret) {
-				pr_err("Unable to drop capability %d: %d\n",
+				pr_warn("Unable to drop capability %d: %d\n",
 								i + b * 32, ret);
 				return -1;
 			}
@@ -382,7 +382,7 @@ static int restore_dumpable_flag(MmEntry *mme)
 	if (mme->dumpable == 0 || mme->dumpable == 1) {
 		ret = sys_prctl(PR_SET_DUMPABLE, mme->dumpable, 0, 0, 0);
 		if (ret) {
-			pr_err("Unable to set PR_SET_DUMPABLE: %d\n", ret);
+			pr_warn("Unable to set PR_SET_DUMPABLE: %d\n", ret);
 			return -1;
 		}
 		return 0;
@@ -402,7 +402,7 @@ static int restore_dumpable_flag(MmEntry *mme)
 			mme->dumpable, current_dumpable);
 		ret = sys_prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);
 		if (ret) {
-			pr_err("Unable to set PR_SET_DUMPABLE: %d\n", ret);
+			pr_warn("Unable to set PR_SET_DUMPABLE: %d\n", ret);
 			return -1;
 		}
 	}
