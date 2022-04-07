@@ -63,5 +63,5 @@ jobs:
       - uses: softprops/action-gh-release@v1
         with:
           files: |
-            ${{ steps.compute.outputs.BUNDLENAME }}.tar.gz
+            ${{ needs.build.outputs.BUNDLENAME }}.tar.gz
 
